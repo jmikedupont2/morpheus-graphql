@@ -1,0 +1,71 @@
+# MetaCoq Shadow Type Schema — Prime 79
+# Types carrying types: umbral moonshine shadow
+# Each type is both data and its own schema
+
+enum Relevance { Relevant Irrelevant }
+enum CastKind { VmCast NativeCast Cast }
+enum AllowedEliminations { IntoSProp IntoPropSProp IntoSetPropSProp IntoAny }
+enum RecursivityKind { Finite CoFinite BiFinite }
+
+union Name = NAnon | NNamed
+type NNamed { ident: String }
+
+type BinderAnnot { binderName: Name binderRelevance: Relevance }
+type Inductive { indKername: String indNat: Int }
+type Projection { projInductive: Inductive projNat1: Int projNat2: Int }
+type CaseInfo { ciInductive: Inductive ciNat: Int ciRelevance: Relevance }
+
+union Term = TRel | TVar | TSort | TConst | TInd | TConstruct
+  | TProd | TLambda | TLetIn | TApp | TCast | TProj
+  | TFix | TCoFix | TEvar
+
+type TRel { relNat: Int }
+type TVar { varIdent: String }
+type TSort { sortLevel: String }
+type TConst { constKername: String constLevels: [String] }
+type TInd { indRef: Inductive indLevels: [String] }
+type TConstruct { constrInd: Inductive constrIdx: Int constrLevels: [String] }
+type TProd { prodAnnot: BinderAnnot prodType: Term prodBody: Term }
+type TLambda { lamAnnot: BinderAnnot lamType: Term lamBody: Term }
+type TLetIn { letAnnot: BinderAnnot letDef: Term letType: Term letBody: Term }
+type TApp { appFn: Term appArgs: [Term] }
+type TCast { castTerm: Term castKind: CastKind castType: Term }
+type TProj { projRef: Projection projTerm: Term }
+type TFix { fixDefs: [Def] fixIdx: Int }
+type TCoFix { cofixDefs: [Def] cofixIdx: Int }
+type TEvar { evarNat: Int evarTerms: [Term] }
+
+type Def { defAnnot: BinderAnnot defType: Term defBody: Term defRargs: Int }
+type ContextDecl { declAnnot: BinderAnnot declValue: Term declType: Term }
+type Branch { branchNames: [BinderAnnot] branchBody: Term }
+type Predicate { predLevels: [String] predTerms: [Term] predNames: [BinderAnnot] predReturn: Term }
+
+type ConstructorBody {
+  ctorName: String ctorContext: [ContextDecl]
+  ctorArgs: [Term] ctorType: Term ctorArity: Int
+}
+type ProjectionBody { projBodyName: String projBodyRelevance: Relevance projBodyTerm: Term }
+
+type OneInductiveBody {
+  oibName: String oibContext: [ContextDecl] oibType: Term
+  oibEliminations: AllowedEliminations oibConstructors: [ConstructorBody]
+  oibProjections: [ProjectionBody] oibRelevance: Relevance
+}
+type MutualInductiveBody {
+  mibRecursivity: RecursivityKind mibNparams: Int
+  mibContext: [ContextDecl] mibBodies: [OneInductiveBody]
+}
+type ConstantBody { cbType: Term cbBody: Term cbRelevance: Relevance }
+union GlobalDecl = ConstantDecl | InductiveDecl
+type ConstantDecl { constantBody: ConstantBody }
+type InductiveDecl { inductiveBody: MutualInductiveBody }
+type GlobalDeclEntry { entryKername: String entryDecl: GlobalDecl }
+type GlobalEnv { envDeclarations: [GlobalDeclEntry] }
+
+type Query {
+  term: Term
+  globalEnv: GlobalEnv
+  exampleNat: Term
+  exampleLambda: Term
+  exampleInductive: OneInductiveBody
+}
