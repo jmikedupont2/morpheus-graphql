@@ -5,6 +5,7 @@
 module Main where
 
 import MetaCoqSchema (schema, typeEntries)
+import DashiAgda (dashiSchema, dashiModules, resolveDashi)
 import Web.Scotty
 import Data.Aeson (object, (.=), Value(..), encode, decode)
 import qualified Data.Aeson.KeyMap as KM
@@ -34,16 +35,20 @@ main = do
           result = resolveQuery query
       json $ object ["data" .= result]
 
-    -- Schema introspection
+    -- Schema introspection (combined: TH + DASHI)
     get "/schema" $ do
-      text (LT.pack schema)
+      text (LT.pack (schema ++ "\n" ++ dashiSchema))
+
+    -- DASHI modules
+    get "/dashi" $ do
+      json $ object ["modules" .= dashiModules, "count" .= length dashiModules]
 
     -- Health
     get "/" $ do
       json $ object
         [ "service" .= ("metacoq-shadow-graphql" :: Text)
         , "types" .= length typeEntries
-        , "endpoints" .= (["/graphql", "/schema", "/types"] :: [Text])
+        , "endpoints" .= (["/graphql", "/schema", "/types", "/dashi"] :: [Text])
         ]
 
     -- Type list
@@ -64,6 +69,11 @@ resolveQuery q
   | "schema" `T.isInfixOf` q = object ["schema" .= schema]
   | "types" `T.isInfixOf` q = object ["types" .= [n | (n, _) <- typeEntries]]
   | "term" `T.isInfixOf` q = object ["term" .= exampleTerm]
+  | "dashiModules" `T.isInfixOf` q = object ["dashiModules" .= dashiModules]
+  | "verifyShadow" `T.isInfixOf` q = object ["verifyShadow" .= object
+      ["pub" .= ("" :: Text), "verified" .= True, "note" .= ("DASHI ZK stub — connect to Agda checker" :: Text)]]
+  | "restoreShadow" `T.isInfixOf` q = object ["restoreShadow" .= object
+      ["value" .= exampleTerm, "depth" .= (0 :: Int), "prime" .= (79 :: Int), "repairs" .= ([] :: [Text])]]
   | "__schema" `T.isInfixOf` q = introspection
   | otherwise = object ["error" .= ("unknown query" :: Text)]
 
